@@ -5,7 +5,7 @@
 | Version | 0.1, draft for review |
 | Date | 2026-09-11 |
 | Owner | Istvan Csenkey-Sinko |
-| Based on | [discovery-notes.md](discovery-notes.md), decisions D1-D20 |
+| Based on | [discovery-notes.md](discovery-notes.md), decisions D1-D21 |
 
 ## 1. Purpose and scope
 

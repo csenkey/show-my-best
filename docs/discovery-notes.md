@@ -34,6 +34,39 @@ Show My Best is a viewer and rating tool around that output.
 | D9 | The skill gets a persisted `competitions.csv`. | Today competition search results only live in the chat, so there is nothing for a Competitions view to read. Requires a skill change. |
 | D10 | The app watches the folder and reloads when a skill run changes the files. | macOS FSEvents. |
 | D11 | The app makes its own thumbnails. | It does not depend on `_contact_sheets/`. |
+| D12 | Istvan's ratings are written into `catalogue.csv` (`istvan_rating` column). No separate ratings file. | Both the app and the skill write this file, so both follow the write rules below. |
+
+## Write rules for `catalogue.csv` (from D12)
+
+Both the app and the skill write `catalogue.csv`. A skill run can take minutes and rewrites
+the whole file, so without rules a rating given in the app during a run could be lost.
+
+**The app:**
+
+- Writes only the `istvan_rating` cell. It never changes any other column, adds or removes
+  columns, or reorders rows.
+- Saves each rating within about a second, not in a batch on quit.
+- Before each save, re-reads the file from disk, finds the row by `source_folder` +
+  `filename`, changes that one cell, and keeps everything else as it is (column order,
+  unknown columns, quoting, CRLF line endings).
+- Writes to a temporary file in the same folder, then renames it over `catalogue.csv`, so a
+  reader never sees a half-written file.
+- Keeps a backup copy before its first write each day, in a folder starting with `_` so it is
+  ignored by both the app and the skill.
+- Keeps its own log of the ratings it wrote. If a later reload shows a rating reverted to the
+  value it had before the app wrote it, the app restores it and tells Istvan. Safety net for
+  the case where a skill run overwrote it anyway.
+
+**The skill (change to `photo-competition-curator`):**
+
+- Re-reads `catalogue.csv` immediately before writing, instead of writing back a copy read
+  at the start of the run.
+- For every existing row, takes `istvan_rating` from the file on disk, never from its own
+  earlier copy.
+- Writes to a temporary file and renames it, like the app.
+
+A rating given in the few seconds between the skill's final re-read and its write can still
+be lost. The app's log catches that case.
 
 ## Findings from the real data (2026-09-11)
 
@@ -72,23 +105,14 @@ Inspected `REAL_BEST` on Istvan's Mac.
 
 ## Open questions
 
-**Q1. Where do Istvan's ratings get written?**
-The app and a skill run would both write data. A skill run can take minutes: if it reads
-`catalogue.csv` at the start and rewrites the whole file at the end, ratings made in the app
-in between are lost. Options:
-
-- *A. Write straight into `catalogue.csv` (`istvan_rating` column).* The app re-reads the
-  file just before saving, changes only that cell, and replaces the file atomically. The skill
-  must re-read the file before writing and keep `istvan_rating` untouched. Simple to read, but
-  protection against lost ratings depends on the skill following its instructions.
-- *B. Write to a separate `ratings.csv` that only the app writes* (`source_folder`,
-  `filename`, `istvan_rating`, `rated_at`). The skill reads it and copies ratings into the
-  catalogue. Each file has exactly one writer, so nothing can be overwritten. It also allows
-  rating a fresh shoot *before* Claude has catalogued it, which matches the natural workflow
-  of culling first and asking Claude second.
+**Q1. Where do Istvan's ratings get written?** *Resolved:* into `catalogue.csv` (D12).
 
 **Q2. Can the app rate photos that are not in the catalogue yet?**
-Follows from Q1: easy with B, needs the app to add partial catalogue rows with A.
+With D12, a photo in a new shoot folder has no row to put the rating in. Options: the app
+shows uncatalogued photos but rating is disabled until Claude has catalogued the shoot; or
+the app adds a minimal row (`filename`, `source_folder`, `istvan_rating`, `status =
+available`) that the skill fills in on its next run. The second means the app also adds rows,
+not just edits one cell.
 
 **Q3. Besides ratings, should the app edit anything else?**
 Candidates: a photo's `status` (for example `retired`), or a submission's `result`. Each one
@@ -112,7 +136,7 @@ photos).
 
 ## Next steps
 
-1. Answer Q1-Q4.
-2. Agree the skill changes: `competitions.csv`, date format, film labelling.
+1. Answer Q2-Q4.
+2. Agree the skill changes: write rules, `competitions.csv`, date format, film labelling.
 3. Write the requirements specification.
 4. Write the design document, including the data contract and the matching skill changes.

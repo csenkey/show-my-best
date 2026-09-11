@@ -40,6 +40,7 @@ Show My Best is a viewer and rating tool around that output.
 | D15 | Claude rates independently too, by its own standards, and is never shaped by Istvan's rating. | The skill rates blind: it forms and saves its rating before it looks at Istvan's. See "Critic partner". |
 | D16 | Claude acts as a critic partner, not a yes-man. | Every photo Istvan rates 4 or 5 gets a written critique that argues or asks why, whether or not Claude agrees. See "Critic partner". |
 | D17 | The critique is one-way. Istvan does not answer it, and nothing he does feeds back into Claude's rating. | He reads critiques to learn from them or to disagree privately. No reply field in the app, no revision of Claude's rating in response to Istvan (answers Q8). |
+| D18 | Istvan's rating counts when the skill matches photos to competitions. | Only rating and critique are blind. Matching uses both ratings (answers Q10). See "Competition matching". |
 
 ## Critic partner (from D14-D16)
 
@@ -87,6 +88,18 @@ consistent between runs.
 **Data:** new columns in `catalogue.csv`, written by the skill: `claude_critique` and
 `critique_for_rating` (Istvan's rating at the time the critique was written, so the app can
 show when a critique is out of date).
+
+## Competition matching (from D18)
+
+Blindness applies to forming opinions, not to deciding what to submit. Once both ratings
+exist, the skill uses both:
+
+- A photo is a candidate for a competition if either Istvan or Claude rated it 4 or 5.
+- Every recommendation shows both ratings.
+- When the ratings differ by 2 or more, the recommendation says so and names the risk, in
+  the same spirit as the critique ("You rated 5, Claude 3: a jury is likely to see a pleasant
+  family moment rather than a distinctive image").
+- Istvan makes the final call on what to enter.
 
 ## Write rules for `catalogue.csv` (from D12)
 
@@ -180,11 +193,8 @@ adds another field the app writes.
 Photos Claude rates 4-5 that Istvan rated 1-2 may be overlooked strong work. Claude could say
 why it thinks he dismissed them too quickly.
 
-**Q10. Does Istvan's rating count when matching photos to competitions?**
-Today the skill uses both ratings when choosing what to submit. If Istvan's rating should not
-influence the skill at all, matching would use Claude's rating only. Alternatively, his
-rating could still count for which photos he wants to submit, while Claude's rating stays
-blind.
+**Q10. Does Istvan's rating count when matching photos to competitions?** *Resolved:* yes
+(D18).
 
 **Q5. File format contract.**
 Encoding and quoting are settled by the real files (standard CSV, see findings). Still to
@@ -200,7 +210,7 @@ photos).
 
 ## Next steps
 
-1. Answer Q3, Q9 and Q10.
+1. Answer Q3 and Q9.
 2. Agree the skill changes: write rules, blind rating and critique, `claude_critique`
    column, `competitions.csv`, date format, film labelling.
 3. Write the requirements specification.

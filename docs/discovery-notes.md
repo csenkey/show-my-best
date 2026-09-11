@@ -39,6 +39,7 @@ Show My Best is a viewer and rating tool around that output.
 | D14 | Istvan's judgement comes first and is never shaped by Claude. | The app hides Claude's rating, rationale and critique for a photo until Istvan has rated it (answers Q4). |
 | D15 | Claude rates independently too, by its own standards, and is never shaped by Istvan's rating. | The skill rates blind: it forms and saves its rating before it looks at Istvan's. See "Critic partner". |
 | D16 | Claude acts as a critic partner, not a yes-man. | Every photo Istvan rates 4 or 5 gets a written critique that argues or asks why, whether or not Claude agrees. See "Critic partner". |
+| D17 | The critique is one-way. Istvan does not answer it, and nothing he does feeds back into Claude's rating. | He reads critiques to learn from them or to disagree privately. No reply field in the app, no revision of Claude's rating in response to Istvan (answers Q8). |
 
 ## Critic partner (from D14-D16)
 
@@ -74,13 +75,18 @@ consistent between runs.
   what Istvan sees in it.
 - Claude separates "a photo that matters to you" from "a photo that is strong for a jury". A
   family photo can deserve a 5 from Istvan and a 2 from a jury, and both can be right.
-- Claude does not raise its rating because Istvan rated higher or disagreed. It changes a
-  rating only when Istvan names something visible that Claude missed, and it records the
-  change in the rationale ("revised from 3 to 4: ...").
+- Claude's rating is set once, blind, and is not revised because of Istvan's rating (D17).
+  Istvan's rating only decides which photos get a critique and what the critique addresses.
 - Critiques are direct and respectful, like a good portfolio review: no flattery, no
-  hedging.
+  hedging. Because Istvan will not reply, a critique asks its question rhetorically and
+  gives Claude's own answer ("What carries this frame? If it is the child's expression, the
+  cluttered background works against it").
+- If Istvan later changes his rating, the old critique stays but is marked with the rating it
+  was written for. A photo newly raised to 4 or 5 gets a critique on the next run.
 
-**Data:** new `claude_critique` column in `catalogue.csv`, written by the skill.
+**Data:** new columns in `catalogue.csv`, written by the skill: `claude_critique` and
+`critique_for_rating` (Istvan's rating at the time the critique was written, so the app can
+show when a critique is out of date).
 
 ## Write rules for `catalogue.csv` (from D12)
 
@@ -167,15 +173,18 @@ adds another field the app writes.
 
 **Q4. In review mode, hide Claude's rating until Istvan has rated?** *Resolved:* yes (D14).
 
-**Q8. Can Istvan answer a critique in the app?**
-A critique asks "why do you think this is good?". Istvan could type his answer in the app
-(new `istvan_note` column, written by the app), and the skill would read it on the next run
-and reply, revise or hold its position. That turns the critique into a back-and-forth across
-runs, but adds a text field the app writes. Alternative: he answers in the Claude chat.
+**Q8. Can Istvan answer a critique in the app?** *Resolved:* no. The critique is one-way
+(D17).
 
 **Q9. Should the critique also cover the reverse case?**
-Photos Claude rates 4-5 that Istvan rated 1-2 may be overlooked strong work. Claude could ask
-why he dismissed them.
+Photos Claude rates 4-5 that Istvan rated 1-2 may be overlooked strong work. Claude could say
+why it thinks he dismissed them too quickly.
+
+**Q10. Does Istvan's rating count when matching photos to competitions?**
+Today the skill uses both ratings when choosing what to submit. If Istvan's rating should not
+influence the skill at all, matching would use Claude's rating only. Alternatively, his
+rating could still count for which photos he wants to submit, while Claude's rating stays
+blind.
 
 **Q5. File format contract.**
 Encoding and quoting are settled by the real files (standard CSV, see findings). Still to
@@ -191,7 +200,7 @@ photos).
 
 ## Next steps
 
-1. Answer Q3, Q8 and Q9.
+1. Answer Q3, Q9 and Q10.
 2. Agree the skill changes: write rules, blind rating and critique, `claude_critique`
    column, `competitions.csv`, date format, film labelling.
 3. Write the requirements specification.

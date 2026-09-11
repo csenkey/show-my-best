@@ -79,7 +79,8 @@ flowchart LR
 ### 2.2 User
 
 One user: Istvan, an experienced amateur photographer shooting digital (Canon EOS R8,
-Canon EOS 6D, iPhone) and black-and-white film, working on an Apple silicon iMac.
+Canon EOS 6D, iPhone) and film, working on an Apple silicon iMac. Film negatives are scanned
+with the Canon EOS R8 and developed in DarkTable; the finished image is what gets judged.
 
 ### 2.3 Terms
 
@@ -281,8 +282,8 @@ One row per photo. Photo key (`source_folder` + `filename`) is unique.
 | `title` | Short descriptive title. | Skill | | |
 | `date_taken` | When the photo was taken, in FMT-6 format. For film: when the film was exposed, not when it was scanned. | Skill | | Format changes |
 | `date_note` | Free-text note about the date, for example `year corrected: 6D clock was wrong`. | Skill | | New |
-| `medium` | `digital` or `film`. | Skill | | New |
-| `camera_or_format` | Digital: camera model. Film: film camera or format (OI-2). | Skill | | Film values change |
+| `medium` | `digital` or `film`. Film means a negative scan, recognised by the shoot folder prefix (SKL-22). | Skill | | New |
+| `camera_or_format` | Digital: camera model from the photo's EXIF data. Film: `SL35 negative scan` or `6x6 negative scan`. | Skill | | Film values change |
 | `genre_tags` | Tags separated by `, `. | Skill | | |
 | `subject` | Short description of what is in the photo. | Skill | | |
 | `istvan_rating` | `1`-`5` or empty. | App only; the skill keeps it unchanged | Yes | |
@@ -377,7 +378,7 @@ Changes to the `photo-competition-curator` skill. The app does not depend on the
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | SKL-8 | Before rating, the skill gets the list of photos that need a Claude rating (no row, or empty `claude_rating`) from a script whose output leaves out `istvan_rating`, `claude_critique` and `critique_for_rating`. Until every rating in the run is saved, the skill does not read `catalogue.csv` in any way that would show it Istvan's ratings. | Must |
-| SKL-9 | The skill rates against a rubric written in the skill: impact, distinctiveness of moment or subject, composition, light, technical execution, originality and story. Scale: 1 = not competition material (technical problems or no clear subject); 2 = competent, pleasant, nothing a jury would stop for; 3 = solid, with one clear strength, unlikely to stand out; 4 = strong, several strengths working together, a real contender at local or national level; 5 = distinctive and memorable, could place in a major competition, rare. | Must |
+| SKL-9 | The skill rates against a rubric written in the skill: impact, distinctiveness of moment or subject, composition, light, technical execution, originality and story. Scale: 1 = not competition material (technical problems or no clear subject); 2 = competent, pleasant, nothing a jury would stop for; 3 = solid, with one clear strength, unlikely to stand out; 4 = strong, several strengths working together, a real contender at local or national level; 5 = distinctive and memorable, could place in a major competition, rare. Negative scans are rated as the finished, developed image by the same standards: scanning and development are part of making the image, neither a flaw nor a bonus in themselves. | Must |
 | SKL-10 | The skill saves `claude_rating` and `claude_rationale` for all photos in the run before it starts writing any critique. | Must |
 | SKL-11 | The skill never changes `claude_rating` because of Istvan's rating. The only exception is when Istvan explicitly asks for a fresh blind re-rating of named photos, which follows SKL-8 to SKL-10. | Must |
 
@@ -404,8 +405,8 @@ Changes to the `photo-competition-curator` skill. The app does not depend on the
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| SKL-21 | `date_taken` is written in FMT-6 format, with any explanation in `date_note`. For film, the exposure date is confirmed with Istvan rather than read from the scan's EXIF. | Must |
-| SKL-22 | `medium` is set for every row; scanned negatives are `film`. | Must |
+| SKL-21 | `date_taken` is written in FMT-6 format, with any explanation in `date_note`. For film, the EXIF date is the scan date, never the date taken; the date taken follows OI-6. | Must |
+| SKL-22 | `medium` is set for every row from the shoot folder prefix: shoots starting with `SL35_` or `6X6_` (any letter case) are negative scans made with the Canon EOS R8, so `medium` is `film` and `camera_or_format` is `SL35 negative scan` or `6x6 negative scan`; the EXIF camera is ignored for them. All other shoots are `digital`, with `camera_or_format` from each photo's EXIF data, since a shoot folder can mix cameras. | Must |
 
 ## 8. Migration of existing data
 
@@ -415,8 +416,8 @@ A one-time skill run that brings today's files in line with section 6.
 |----|-------------|----------|
 | MIG-1 | Before changing anything, the skill copies all CSV files into a `_backups/` folder in the library, with the date in the filename. | Must |
 | MIG-2 | Adds the columns `date_note`, `medium`, `claude_critique` and `critique_for_rating` to `catalogue.csv`. | Must |
-| MIG-3 | Converts `date_taken` on all rows, moving explanations into `date_note`. Example: `2026:06:02 17:21:53 (camera clock correct)` becomes `2026-06-02T17:21:53` with note `camera clock correct`; `2026 (year corrected from EXIF 2013 - ...)` becomes `2026` with the explanation as note. | Must |
-| MIG-4 | Sets `medium`: `film` for the photos in `SL35_` shoots (88 today), `digital` for the rest, and corrects `camera_or_format` for film rows (OI-2). Anything uncertain is asked, not guessed. | Must |
+| MIG-3 | Converts `date_taken` on all rows, moving explanations into `date_note`, using the date source agreed in OI-6. Example for a photo whose EXIF date is right: `2026:06:02 17:21:53 (camera clock correct)` becomes `2026-06-02T17:21:53` with note `camera clock correct`. | Must |
+| MIG-4 | Sets `medium` and `camera_or_format` as in SKL-22: today that makes the 88 photos in the four `SL35_` shoots `film` and the rest `digital`. Anything uncertain is asked, not guessed. | Must |
 | MIG-5 | Builds `competitions.csv` and `competition_matches.csv` from the 60 rows that have `competition_fit_notes`, re-checking each competition online first. Competitions that cannot be verified are left out and listed for Istvan. | Must |
 | MIG-6 | Replaces the `submissions.csv` header with the section 6.5 format. | Must |
 | MIG-7 | Does not change `istvan_rating` or `claude_rating`. No critiques are written during migration. | Must |
@@ -444,10 +445,11 @@ A one-time skill run that brings today's files in line with section 6.
 | ID | Item | Proposal |
 |----|------|----------|
 | OI-1 | Minimum macOS version. | Decide in the design document, based on the version on Istvan's iMac and the SwiftUI features needed. |
-| OI-2 | How film rows are labelled in `camera_or_format`: what film camera or format "SL35" stands for, and whether the roll should be recorded. | Istvan to confirm before migration. |
+| OI-2 | How film rows are labelled. | *Resolved:* `SL35_` and `6X6_` shoots are negative scans made with the Canon EOS R8 and developed in DarkTable (SKL-22). |
 | OI-3 | Default behaviour after rating in review mode. | Move to the next photo (CUL-5); revisit after first use. |
 | OI-4 | Titles are written by Claude and could hint at its opinion. | Show them before rating, since they describe rather than judge (IND-2). Istvan to confirm. |
 | OI-5 | How the app is built, signed and installed on the iMac (not through the App Store). | Decide in the design document. |
+| OI-6 | Which date counts as "date taken". EXIF dates are unreliable in today's catalogue: all 88 film scans carry September 2026 scan dates while their folders end in `202607` to `202609`, and the R8 photos show January to March 2026 while their folders end in `202606` to `202608`. | Treat the `YYYYMM` at the end of the shoot folder name as the month the photos were taken. Use the EXIF date only when it falls in that month; otherwise write `YYYY-MM` from the folder and keep the EXIF date in `date_note`. Istvan to confirm what the folder month means. |
 
 ## 11. Traceability
 
@@ -473,4 +475,5 @@ A one-time skill run that brings today's files in line with section 6.
 | D18 Istvan's rating counts in matching | SKL-17, CMP-5 |
 | D19 App writes only ratings | RAT-5, RAT-13, 1.4 |
 | D20 Reverse-case critique | SKL-12, SKL-13 |
+| D21 Film scans by folder prefix, judged as the final image | SKL-9, SKL-22, MIG-4 |
 | Findings: dates, film labels, prose matches | SKL-21, SKL-22, MIG-2 to MIG-5 |

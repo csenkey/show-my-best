@@ -8,6 +8,8 @@ The skill runs separately in the Claude app and writes the data files (`catalogu
 presents them as a gallery, lets Istvan review and rate photos, and writes his ratings back
 so later skill runs build on them.
 
-Status: discovery. See [docs/discovery-notes.md](docs/discovery-notes.md) for the decisions
-made so far and the open questions. A requirements specification and design document will
-follow.
+Status: requirements drafted, design next.
+
+- [docs/requirements-spec.md](docs/requirements-spec.md): what the app and the skill must do.
+- [docs/discovery-notes.md](docs/discovery-notes.md): the decisions behind it and findings
+  from the real catalogue.

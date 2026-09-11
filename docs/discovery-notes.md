@@ -123,8 +123,8 @@ the whole file, so without rules a rating given in the app during a run could be
   unknown columns, quoting, CRLF line endings).
 - Writes to a temporary file in the same folder, then renames it over `catalogue.csv`, so a
   reader never sees a half-written file.
-- Keeps a backup copy before its first write each day, in a folder starting with `_` so it is
-  ignored by both the app and the skill.
+- Keeps a backup copy before its first write each day, in the app's own Application Support
+  folder rather than the library, so the skill never sees it.
 - Keeps its own log of the ratings it wrote. If a later reload shows a rating reverted to the
   value it had before the app wrote it, the app restores it and tells Istvan. Safety net for
   the case where a skill run overwrote it anyway.

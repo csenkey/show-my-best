@@ -44,6 +44,7 @@ Show My Best is a viewer and rating tool around that output.
 | D19 | In v1 the app writes only Istvan's ratings (including the minimal rows from D13). | Status changes and competition results stay in the Claude chat (answers Q3). |
 | D20 | The critique also covers the reverse case: photos Claude rates 4-5 that Istvan rated 1-2. | Claude says why it thinks he dismissed them too quickly (answers Q9). |
 | D21 | Shoots starting with `SL35_` or `6X6_` are negative scans, made with the Canon EOS R8 and developed in DarkTable. The finished image is what gets judged. | Film is recognised by folder prefix, not EXIF. Scans are rated by the same standards as digital photos. |
+| D22 | The `_YYYYMM` at the end of a shoot folder name is the month the photos were taken; for film, the month the roll was shot. | EXIF dates are used only when they fall in that month. See spec SKL-21. |
 
 ## Critic partner (from D14-D17, D20)
 
@@ -170,7 +171,7 @@ Inspected `REAL_BEST` on Istvan's Mac.
 - **EXIF dates are unreliable.** The film scans all carry September 2026 scan dates, although
   their folders end in `202607` to `202609`. R8 photos show January to March 2026 while their
   folders end in `202606` to `202608`, so the R8 clock is off by months, not only the year.
-  The folder's `YYYYMM` looks like the more reliable shoot month (to confirm, spec OI-6).
+  The folder's `YYYYMM` is the shoot month (confirmed, D22).
 - **Folder prefixes do not mean one camera.** `6D_Vivas_pecs_202605` has 10 R8 photos and
   `R8_Rovinj_202606` has 30 6D photos. For digital shoots the camera must come from each
   photo's EXIF data.

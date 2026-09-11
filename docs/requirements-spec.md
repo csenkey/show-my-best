@@ -5,7 +5,7 @@
 | Version | 0.1, draft for review |
 | Date | 2026-09-11 |
 | Owner | Istvan Csenkey-Sinko |
-| Based on | [discovery-notes.md](discovery-notes.md), decisions D1-D21 |
+| Based on | [discovery-notes.md](discovery-notes.md), decisions D1-D22 |
 
 ## 1. Purpose and scope
 
@@ -87,7 +87,7 @@ with the Canon EOS R8 and developed in DarkTable; the finished image is what get
 | Term | Meaning |
 |------|---------|
 | Library | The folder containing `catalogue.csv`, today `~/Pictures/6x6Stories/REAL_BEST`. |
-| Shoot | A direct subfolder of the library holding the photos of one shoot, for example `R8_Rovinj_202606`. |
+| Shoot | A direct subfolder of the library holding the photos of one shoot, for example `R8_Rovinj_202606`. The name ends in `_YYYYMM`, the month the photos were taken. |
 | Photo key | Shoot folder name plus filename. Unique within a library. |
 | My rating | Istvan's rating, column `istvan_rating`. |
 | Claude's rating | The skill's blind rating, column `claude_rating`. |
@@ -405,7 +405,7 @@ Changes to the `photo-competition-curator` skill. The app does not depend on the
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| SKL-21 | `date_taken` is written in FMT-6 format, with any explanation in `date_note`. For film, the EXIF date is the scan date, never the date taken; the date taken follows OI-6. | Must |
+| SKL-21 | `date_taken` is written in FMT-6 format, with any explanation in `date_note`. The `_YYYYMM` at the end of the shoot folder name is the month the photos were taken; for film, the month the roll was shot. A digital photo's EXIF date is used only when it falls in that month; otherwise `date_taken` is `YYYY-MM` from the folder name and the EXIF date goes into `date_note`. Film rows always use the folder month, because their EXIF date is the scan date. If a new shoot folder name has no `_YYYYMM` ending, the skill asks Istvan for the month. | Must |
 | SKL-22 | `medium` is set for every row from the shoot folder prefix: shoots starting with `SL35_` or `6X6_` (any letter case) are negative scans made with the Canon EOS R8, so `medium` is `film` and `camera_or_format` is `SL35 negative scan` or `6x6 negative scan`; the EXIF camera is ignored for them. All other shoots are `digital`, with `camera_or_format` from each photo's EXIF data, since a shoot folder can mix cameras. | Must |
 
 ## 8. Migration of existing data
@@ -416,7 +416,7 @@ A one-time skill run that brings today's files in line with section 6.
 |----|-------------|----------|
 | MIG-1 | Before changing anything, the skill copies all CSV files into a `_backups/` folder in the library, with the date in the filename. | Must |
 | MIG-2 | Adds the columns `date_note`, `medium`, `claude_critique` and `critique_for_rating` to `catalogue.csv`. | Must |
-| MIG-3 | Converts `date_taken` on all rows, moving explanations into `date_note`, using the date source agreed in OI-6. Example for a photo whose EXIF date is right: `2026:06:02 17:21:53 (camera clock correct)` becomes `2026-06-02T17:21:53` with note `camera clock correct`. | Must |
+| MIG-3 | Converts `date_taken` on all rows as in SKL-21, moving explanations into `date_note`. Examples: a 6D photo in `6D_Paty_202606` dated `2026:06:02 17:21:53` becomes `2026-06-02T17:21:53`; an R8 photo in `R8_Budapest_202606` with EXIF `2026:01:22 17:20:57` becomes `2026-06` with note `EXIF date 2026-01-22 17:20:57, camera clock wrong`; a scan in `SL35_Szeged_202607` becomes `2026-07` with note `scanned 2026-09-09`. | Must |
 | MIG-4 | Sets `medium` and `camera_or_format` as in SKL-22: today that makes the 88 photos in the four `SL35_` shoots `film` and the rest `digital`. Anything uncertain is asked, not guessed. | Must |
 | MIG-5 | Builds `competitions.csv` and `competition_matches.csv` from the 60 rows that have `competition_fit_notes`, re-checking each competition online first. Competitions that cannot be verified are left out and listed for Istvan. | Must |
 | MIG-6 | Replaces the `submissions.csv` header with the section 6.5 format. | Must |
@@ -449,7 +449,7 @@ A one-time skill run that brings today's files in line with section 6.
 | OI-3 | Default behaviour after rating in review mode. | Move to the next photo (CUL-5); revisit after first use. |
 | OI-4 | Titles are written by Claude and could hint at its opinion. | Show them before rating, since they describe rather than judge (IND-2). Istvan to confirm. |
 | OI-5 | How the app is built, signed and installed on the iMac (not through the App Store). | Decide in the design document. |
-| OI-6 | Which date counts as "date taken". EXIF dates are unreliable in today's catalogue: all 88 film scans carry September 2026 scan dates while their folders end in `202607` to `202609`, and the R8 photos show January to March 2026 while their folders end in `202606` to `202608`. | Treat the `YYYYMM` at the end of the shoot folder name as the month the photos were taken. Use the EXIF date only when it falls in that month; otherwise write `YYYY-MM` from the folder and keep the EXIF date in `date_note`. Istvan to confirm what the folder month means. |
+| OI-6 | Which date counts as "date taken", given unreliable EXIF dates (film scans carry scan dates; the R8 clock is months off). | *Resolved:* the folder's `_YYYYMM` is the month taken, for film the month the roll was shot (SKL-21). |
 
 ## 11. Traceability
 
@@ -476,4 +476,5 @@ A one-time skill run that brings today's files in line with section 6.
 | D19 App writes only ratings | RAT-5, RAT-13, 1.4 |
 | D20 Reverse-case critique | SKL-12, SKL-13 |
 | D21 Film scans by folder prefix, judged as the final image | SKL-9, SKL-22, MIG-4 |
+| D22 Folder month is the month taken | SKL-21, MIG-3 |
 | Findings: dates, film labels, prose matches | SKL-21, SKL-22, MIG-2 to MIG-5 |

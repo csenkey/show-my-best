@@ -35,6 +35,41 @@ Show My Best is a viewer and rating tool around that output.
 | D10 | The app watches the folder and reloads when a skill run changes the files. | macOS FSEvents. |
 | D11 | The app makes its own thumbnails. | It does not depend on `_contact_sheets/`. |
 
+## Findings from the real data (2026-09-11)
+
+Inspected `REAL_BEST` on Istvan's Mac.
+
+- **Size:** 329 photos in 13 shoot folders (R8, 6D and SL35 prefixes). Every photo on disk
+  has a catalogue row and every row has a photo, so disk and catalogue are in sync today.
+- **File format:** standard comma-separated CSV, UTF-8 without BOM, CRLF line endings,
+  double-quote quoting for fields containing commas, no line breaks inside fields. The `|`
+  in the skill text is only how the columns are documented.
+- **Photo identity:** 3 filenames appear in two shoots each (`IMG_2216.JPG`, `IMG_2346.JPG`,
+  `IMG_0155.JPG`). `source_folder` + `filename` is unique, so that is the key (answers Q6).
+- **Istvan's ratings:** `istvan_rating` is empty on all 329 rows. Rating in the app fills a
+  real gap.
+- **Claude's ratings:** 9 photos rated 5, 70 rated 4, 169 rated 3, 81 rated 2. A "best"
+  view of 4-5 holds 79 photos.
+- **Status:** all 329 are `available`. `submissions.csv` has a header and no entries yet.
+- **`date_taken` is free text, not a date.** Examples: `2026:06:02 17:21:53 (camera clock
+  correct)`, `2026 (year corrected from EXIF 2013 - 6D clock was badly wrong per Istvan; ...)`.
+  The app cannot sort or filter by date reliably. Proposed skill change: split into a
+  machine-readable date (ISO 8601, year-only allowed) and a separate `date_note`.
+- **Film scans are labelled as digital.** The SL35 folders (88 photos) have
+  `camera_or_format = Canon EOS R8`, the camera used to scan the negatives. The skill intends
+  `negative-scan`. A "film vs digital" filter would be wrong today. Proposed skill change:
+  label scans as film and keep the scanning camera separately if needed.
+- **Competition matches are prose.** 60 rows have `competition_fit_notes`, with several
+  competitions separated by ` | ` and deadlines written inside sentences ("closes 12 Oct
+  2026"). The app can show the text but cannot sort by deadline or list competitions. This
+  confirms D9 (`competitions.csv`).
+- **Genre tags** are free-form but settle on about 25 values (documentary, family,
+  landscape, portrait, street, wildlife, ...), which works for filter chips.
+- **Working files the app should ignore:** `_meta.csv`, `_meta_new*.csv` (EXIF dumps with
+  width, height and orientation) and `_contact_sheets/` (montages plus `ratings*.txt`).
+  Rule: skip anything starting with `_` or `.`.
+- **Image types:** 328 JPEGs (`.JPG` and `.jpg`) and 1 PNG.
+
 ## Open questions
 
 **Q1. Where do Istvan's ratings get written?**
@@ -64,13 +99,11 @@ Seeing Claude's score first pulls Istvan's score toward it, which weakens the tw
 check the skill uses (it flags disagreements of more than 2 points).
 
 **Q5. File format contract.**
-The skill documents columns with `|` separators but names the files `.csv`, and rationale
-text contains commas. Agree on delimiter, quoting, encoding, date format and a schema
-version, then update the skill to match.
+Encoding and quoting are settled by the real files (standard CSV, see findings). Still to
+agree: a machine-readable `date_taken`, film vs digital labelling, and a schema version.
+Then update the skill to match.
 
-**Q6. Photo identity.**
-Filenames like `DSC_0421.jpg` can repeat across shoots, so rows should be keyed by
-`source_folder` + `filename`. Confirm this against the real files.
+**Q6. Photo identity.** *Resolved:* key is `source_folder` + `filename` (see findings).
 
 **Q7. Competitions schema.**
 Define `competitions.csv` columns (name, organizer, URL, fee, deadline, eligibility, theme,
@@ -80,6 +113,6 @@ photos).
 ## Next steps
 
 1. Answer Q1-Q4.
-2. Inspect the real `catalogue.csv` and `submissions.csv` to settle Q5 and Q6.
+2. Agree the skill changes: `competitions.csv`, date format, film labelling.
 3. Write the requirements specification.
 4. Write the design document, including the data contract and the matching skill changes.

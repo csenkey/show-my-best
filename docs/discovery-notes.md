@@ -41,8 +41,10 @@ Show My Best is a viewer and rating tool around that output.
 | D16 | Claude acts as a critic partner, not a yes-man. | Every photo Istvan rates 4 or 5 gets a written critique that argues or asks why, whether or not Claude agrees. See "Critic partner". |
 | D17 | The critique is one-way. Istvan does not answer it, and nothing he does feeds back into Claude's rating. | He reads critiques to learn from them or to disagree privately. No reply field in the app, no revision of Claude's rating in response to Istvan (answers Q8). |
 | D18 | Istvan's rating counts when the skill matches photos to competitions. | Only rating and critique are blind. Matching uses both ratings (answers Q10). See "Competition matching". |
+| D19 | In v1 the app writes only Istvan's ratings (including the minimal rows from D13). | Status changes and competition results stay in the Claude chat (answers Q3). |
+| D20 | The critique also covers the reverse case: photos Claude rates 4-5 that Istvan rated 1-2. | Claude says why it thinks he dismissed them too quickly (answers Q9). |
 
-## Critic partner (from D14-D16)
+## Critic partner (from D14-D17, D20)
 
 Istvan wants the kind of critique a gallery or a jury gives, not an app that agrees with him.
 Two independent opinions are only worth having if neither sees the other before forming its
@@ -74,6 +76,8 @@ consistent between runs.
   Claude agrees, it still says what a jury could hold against the photo.
 - When Claude rates lower, it argues with specifics (what in the frame weakens it) and asks
   what Istvan sees in it.
+- Reverse case (D20): a photo Claude rates 4-5 and Istvan rates 1-2 also gets a critique,
+  saying why Claude thinks it was dismissed too quickly.
 - Claude separates "a photo that matters to you" from "a photo that is strong for a jury". A
   family photo can deserve a 5 from Istvan and a 2 from a jury, and both can be right.
 - Claude's rating is set once, blind, and is not revised because of Istvan's rating (D17).
@@ -180,18 +184,14 @@ Inspected `REAL_BEST` on Istvan's Mac.
 **Q2. Can the app rate photos that are not in the catalogue yet?** *Resolved:* yes, rate
 first (D13).
 
-**Q3. Besides ratings, should the app edit anything else?**
-Candidates: a photo's `status` (for example `retired`), or a submission's `result`. Each one
-adds another field the app writes.
+**Q3. Besides ratings, should the app edit anything else?** *Resolved:* no, not in v1 (D19).
 
 **Q4. In review mode, hide Claude's rating until Istvan has rated?** *Resolved:* yes (D14).
 
 **Q8. Can Istvan answer a critique in the app?** *Resolved:* no. The critique is one-way
 (D17).
 
-**Q9. Should the critique also cover the reverse case?**
-Photos Claude rates 4-5 that Istvan rated 1-2 may be overlooked strong work. Claude could say
-why it thinks he dismissed them too quickly.
+**Q9. Should the critique also cover the reverse case?** *Resolved:* yes (D20).
 
 **Q10. Does Istvan's rating count when matching photos to competitions?** *Resolved:* yes
 (D18).
@@ -210,8 +210,9 @@ photos).
 
 ## Next steps
 
-1. Answer Q3 and Q9.
-2. Agree the skill changes: write rules, blind rating and critique, `claude_critique`
-   column, `competitions.csv`, date format, film labelling.
-3. Write the requirements specification.
-4. Write the design document, including the data contract and the matching skill changes.
+Discovery is complete. The requirements are in
+[requirements-spec.md](requirements-spec.md).
+
+1. Review the requirements specification.
+2. Write the design document (app architecture, CSV handling, file watching, thumbnails).
+3. Update the `photo-competition-curator` skill to the requirements in the spec.

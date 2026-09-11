@@ -35,6 +35,52 @@ Show My Best is a viewer and rating tool around that output.
 | D10 | The app watches the folder and reloads when a skill run changes the files. | macOS FSEvents. |
 | D11 | The app makes its own thumbnails. | It does not depend on `_contact_sheets/`. |
 | D12 | Istvan's ratings are written into `catalogue.csv` (`istvan_rating` column). No separate ratings file. | Both the app and the skill write this file, so both follow the write rules below. |
+| D13 | Rate first: Istvan can rate photos Claude has not catalogued yet. | The app adds a minimal row for each such photo; the skill fills in the rest on its next run. |
+| D14 | Istvan's judgement comes first and is never shaped by Claude. | The app hides Claude's rating, rationale and critique for a photo until Istvan has rated it (answers Q4). |
+| D15 | Claude rates independently too, by its own standards, and is never shaped by Istvan's rating. | The skill rates blind: it forms and saves its rating before it looks at Istvan's. See "Critic partner". |
+| D16 | Claude acts as a critic partner, not a yes-man. | Every photo Istvan rates 4 or 5 gets a written critique that argues or asks why, whether or not Claude agrees. See "Critic partner". |
+
+## Critic partner (from D14-D16)
+
+Istvan wants the kind of critique a gallery or a jury gives, not an app that agrees with him.
+Two independent opinions are only worth having if neither sees the other before forming its
+own.
+
+**Order of opinions for each photo:**
+
+1. Istvan rates in the app. Claude's views on that photo stay hidden until he has.
+2. Claude rates in a skill run without seeing Istvan's rating, and saves its rating and
+   rationale.
+3. Only then does Claude compare the two and write a critique.
+4. The app reveals Claude's rating, rationale and critique next to Istvan's.
+
+**Blind rating in the skill.** A model cannot unsee a number once it is in its context, and
+with rate first (D13) most new photos will already carry Istvan's rating when Claude meets
+them. So the skill must not open `catalogue.csv` directly before rating. Instead it runs a
+small script that lists the photos needing a Claude rating *with the `istvan_rating` column
+removed*, rates from contact sheets, saves `claude_rating` and `claude_rationale`, and only
+then reads Istvan's ratings for the critique step.
+
+**Claude's standards.** Claude rates against what a competition jury or gallery curator would
+reward: impact, a distinctive moment or subject, composition, light, technical execution,
+originality and story. A 5 is rare. The skill writes these criteria down so ratings stay
+consistent between runs.
+
+**Critique rules:**
+
+- Every photo Istvan rates 4 or 5 gets a critique, including ones where Claude agrees. When
+  Claude agrees, it still says what a jury could hold against the photo.
+- When Claude rates lower, it argues with specifics (what in the frame weakens it) and asks
+  what Istvan sees in it.
+- Claude separates "a photo that matters to you" from "a photo that is strong for a jury". A
+  family photo can deserve a 5 from Istvan and a 2 from a jury, and both can be right.
+- Claude does not raise its rating because Istvan rated higher or disagreed. It changes a
+  rating only when Istvan names something visible that Claude missed, and it records the
+  change in the rationale ("revised from 3 to 4: ...").
+- Critiques are direct and respectful, like a good portfolio review: no flattery, no
+  hedging.
+
+**Data:** new `claude_critique` column in `catalogue.csv`, written by the skill.
 
 ## Write rules for `catalogue.csv` (from D12)
 
@@ -43,8 +89,11 @@ the whole file, so without rules a rating given in the app during a run could be
 
 **The app:**
 
-- Writes only the `istvan_rating` cell. It never changes any other column, adds or removes
-  columns, or reorders rows.
+- Writes only the `istvan_rating` cell. It never changes any other column, removes or
+  reorders columns, or reorders rows.
+- Rate first (D13): for a photo with no row yet, adds one row at the end with `filename`,
+  `source_folder`, `istvan_rating` and `status = available`, and every other column empty.
+  An empty `claude_rating` tells the skill the photo still needs cataloguing.
 - Saves each rating within about a second, not in a batch on quit.
 - Before each save, re-reads the file from disk, finds the row by `source_folder` +
   `filename`, changes that one cell, and keeps everything else as it is (column order,
@@ -63,6 +112,8 @@ the whole file, so without rules a rating given in the app during a run could be
   at the start of the run.
 - For every existing row, takes `istvan_rating` from the file on disk, never from its own
   earlier copy.
+- Fills in rows the app added (empty `claude_rating`) instead of adding duplicates, rating
+  them blind as described under "Critic partner".
 - Writes to a temporary file and renames it, like the app.
 
 A rating given in the few seconds between the skill's final re-read and its write can still
@@ -107,20 +158,24 @@ Inspected `REAL_BEST` on Istvan's Mac.
 
 **Q1. Where do Istvan's ratings get written?** *Resolved:* into `catalogue.csv` (D12).
 
-**Q2. Can the app rate photos that are not in the catalogue yet?**
-With D12, a photo in a new shoot folder has no row to put the rating in. Options: the app
-shows uncatalogued photos but rating is disabled until Claude has catalogued the shoot; or
-the app adds a minimal row (`filename`, `source_folder`, `istvan_rating`, `status =
-available`) that the skill fills in on its next run. The second means the app also adds rows,
-not just edits one cell.
+**Q2. Can the app rate photos that are not in the catalogue yet?** *Resolved:* yes, rate
+first (D13).
 
 **Q3. Besides ratings, should the app edit anything else?**
 Candidates: a photo's `status` (for example `retired`), or a submission's `result`. Each one
 adds another field the app writes.
 
-**Q4. In review mode, hide Claude's rating until Istvan has rated?**
-Seeing Claude's score first pulls Istvan's score toward it, which weakens the two-opinion
-check the skill uses (it flags disagreements of more than 2 points).
+**Q4. In review mode, hide Claude's rating until Istvan has rated?** *Resolved:* yes (D14).
+
+**Q8. Can Istvan answer a critique in the app?**
+A critique asks "why do you think this is good?". Istvan could type his answer in the app
+(new `istvan_note` column, written by the app), and the skill would read it on the next run
+and reply, revise or hold its position. That turns the critique into a back-and-forth across
+runs, but adds a text field the app writes. Alternative: he answers in the Claude chat.
+
+**Q9. Should the critique also cover the reverse case?**
+Photos Claude rates 4-5 that Istvan rated 1-2 may be overlooked strong work. Claude could ask
+why he dismissed them.
 
 **Q5. File format contract.**
 Encoding and quoting are settled by the real files (standard CSV, see findings). Still to
@@ -136,7 +191,8 @@ photos).
 
 ## Next steps
 
-1. Answer Q2-Q4.
-2. Agree the skill changes: write rules, `competitions.csv`, date format, film labelling.
+1. Answer Q3, Q8 and Q9.
+2. Agree the skill changes: write rules, blind rating and critique, `claude_critique`
+   column, `competitions.csv`, date format, film labelling.
 3. Write the requirements specification.
 4. Write the design document, including the data contract and the matching skill changes.

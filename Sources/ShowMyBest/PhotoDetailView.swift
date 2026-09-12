@@ -40,17 +40,23 @@ struct PhotoDetailView: View {
         }
         .background(Broadsheet.bg)
         .foregroundStyle(Broadsheet.text)
-        .onKeyPress(.escape) { dismiss(); return .handled }
-        .onKeyPress { press in
-            switch press.characters {
+        // The detail is a sheet over the gallery, which keeps keyboard focus,
+        // so the keys come through a monitor rather than .onKeyPress.
+        .keyMonitor(isActive: true) { event in
+            guard !event.modifierFlags.contains(.command) else { return false }
+            if event.keyCode == Key.escape {
+                dismiss()
+                return true
+            }
+            switch event.charactersIgnoringModifiers ?? "" {
             case "1", "2", "3", "4", "5":
-                model.setRating(Int(press.characters), for: key)
-                return .handled
+                model.setRating(Int(event.charactersIgnoringModifiers ?? ""), for: key)
+                return true
             case "0":
                 model.setRating(nil, for: key)
-                return .handled
+                return true
             default:
-                return .ignored
+                return false
             }
         }
     }

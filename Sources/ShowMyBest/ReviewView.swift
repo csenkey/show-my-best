@@ -27,7 +27,9 @@ final class ReviewSession {
 
     /// CUL-10: one step back, saved like any other rating change.
     private var undoStack: [(PhotoKey, Int?)] = []
-    private var didEnterFullScreen = false
+    /// The window review mode put into full screen, kept so leaving can put it
+    /// back even if it is no longer the key window.
+    private var fullScreenWindow: NSWindow?
 
     var currentKey: PhotoKey? { keys.indices.contains(index) ? keys[index] : nil }
 
@@ -36,7 +38,14 @@ final class ReviewSession {
             if case .shoot = model.scope { return [.notRatedInShoot, .allInShoot, .currentView] }
             return [.notRatedInView, .currentView]
         }()
-        choice = offeredChoices.contains(suggested) ? suggested : (offeredChoices.first ?? .currentView)
+        // Landing on an empty choice strands the chooser: once everything is
+        // rated, "Not rated by me" is 0 and Start review is disabled.
+        let withPhotos = offeredChoices.filter { !photos(model, for: $0).isEmpty }
+        if offeredChoices.contains(suggested), !photos(model, for: suggested).isEmpty {
+            choice = suggested
+        } else {
+            choice = withPhotos.first ?? offeredChoices.first ?? .currentView
+        }
         isChoosingScope = true
         isActive = true
     }
@@ -79,18 +88,21 @@ final class ReviewSession {
         }
         if let window = NSApp.keyWindow, !window.styleMask.contains(.fullScreen) {
             window.toggleFullScreen(nil)
-            didEnterFullScreen = true
+            fullScreenWindow = window
         }
     }
 
+    /// Leaving review mode. Safe to call at any point, from any of the ways
+    /// out: Esc, the button on the overlay, the menu item, or a scope that
+    /// turned out to be empty.
     func finish() {
         isActive = false
         isChoosingScope = false
         keys = []
-        if didEnterFullScreen, let window = NSApp.keyWindow, window.styleMask.contains(.fullScreen) {
+        if let window = fullScreenWindow, window.styleMask.contains(.fullScreen) {
             window.toggleFullScreen(nil)
         }
-        didEnterFullScreen = false
+        fullScreenWindow = nil
     }
 
     func move(by offset: Int) {
@@ -138,6 +150,7 @@ struct ReviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(session.isChoosingScope ? Broadsheet.bg : Broadsheet.photoGround)
+        .keyMonitor(isActive: session.isActive) { handle($0) }
     }
 
     // MARK: Step 1 — what to review (CUL-2)
@@ -220,6 +233,7 @@ struct ReviewView: View {
                         .frame(width: 320)
                 }
             }
+            .overlay(alignment: .topTrailing) { leaveButton }
 
             progressBar
 
@@ -227,9 +241,6 @@ struct ReviewView: View {
                 filmstrip
             }
         }
-        .focusable()
-        .focusEffectDisabled()
-        .onKeyPress { press in handle(press) }
         .task(id: session.index) {
             // NFR-7: get the neighbours ready.
             let urls = [session.index - 1, session.index + 1]
@@ -237,6 +248,20 @@ struct ReviewView: View {
                 .compactMap { model.photo(for: session.keys[$0])?.url }
             ImageCache.shared.prefetch(urls, maxPixel: 3200)
         }
+    }
+
+    /// There is always a way out that does not need the keyboard, and it stays
+    /// when H hides the rest of the overlay.
+    private var leaveButton: some View {
+        Button("Leave review  esc") { session.finish() }
+            .buttonStyle(.plain)
+            .font(Broadsheet.body(12))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color.black.opacity(0.45))
+            .clipShape(RoundedRectangle(cornerRadius: Broadsheet.radius))
+            .padding(Broadsheet.Space.three)
     }
 
     /// CUL-4: filename, shoot, rating, position — and the keys, which are the
@@ -254,8 +279,7 @@ struct ReviewView: View {
             Spacer()
             HStack(alignment: .bottom) {
                 HStack(spacing: Broadsheet.Space.two) {
-                    Text(starsText(photo.istvanRating))
-                        .font(Broadsheet.body(20))
+                    ReviewStars(rating: photo.istvanRating) { session.rate($0, model: model) }
                     if let note = session.lastRating {
                         Text(note)
                             .font(Broadsheet.body(12))
@@ -390,30 +414,66 @@ struct ReviewView: View {
 
     // MARK: Keys (CUL-3)
 
-    private func handle(_ press: KeyPress) -> KeyPress.Result {
-        if press.modifiers.contains(.command), press.characters == "z" {
-            session.undo(model: model)                       // CUL-10
-            return .handled
+    /// Called by the key monitor, so these work whatever holds focus.
+    private func handle(_ event: NSEvent) -> Bool {
+        let characters = event.charactersIgnoringModifiers?.lowercased() ?? ""
+
+        // Esc always leaves review mode, whichever step it is on.
+        if event.keyCode == Key.escape {
+            session.finish()
+            return true
         }
-        switch press.key {
-        case .escape: session.finish(); return .handled
-        case .leftArrow: session.move(by: -1); return .handled
-        case .rightArrow: session.move(by: 1); return .handled
-        case .delete, .deleteForward: session.rate(nil, model: model); return .handled
+        if session.isChoosingScope {
+            guard event.keyCode == Key.returnKey else { return false }
+            session.start(model)
+            return true
+        }
+
+        if event.modifierFlags.contains(.command) {
+            guard characters == "z" else { return false }   // leave ⌘Q, ⌘W and the rest alone
+            session.undo(model: model)                      // CUL-10
+            return true
+        }
+
+        switch event.keyCode {
+        case Key.leftArrow: session.move(by: -1); return true
+        case Key.rightArrow: session.move(by: 1); return true
+        case Key.delete, Key.forwardDelete: session.rate(nil, model: model); return true
         default: break
         }
-        switch press.characters.lowercased() {
+
+        switch characters {
         case "1", "2", "3", "4", "5":
-            session.rate(Int(press.characters), model: model)
-            return .handled
-        case "0":
-            session.rate(nil, model: model)
-            return .handled
-        case "i": session.showInfo.toggle(); return .handled
-        case "f": session.showFilmstrip.toggle(); return .handled
-        case "h": session.showOverlay.toggle(); return .handled
-        case "z": session.isZoomed.toggle(); return .handled
-        default: return .ignored
+            session.rate(Int(characters), model: model)
+            return true
+        case "0": session.rate(nil, model: model); return true
+        case "i": session.showInfo.toggle(); return true
+        case "f": session.showFilmstrip.toggle(); return true
+        case "h": session.showOverlay.toggle(); return true
+        case "z": session.isZoomed.toggle(); return true
+        default: return false
         }
+    }
+}
+
+/// The rating on the review overlay. The keyboard is the fast path (CUL-3),
+/// but the stars are a control, not decoration: clicking one rates the photo
+/// and clicking the current rating clears it.
+struct ReviewStars: View {
+    let rating: Int?
+    var onRate: (Int?) -> Void
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(1...5, id: \.self) { value in
+                Text((rating ?? 0) >= value ? "\u{2605}" : "\u{2606}")
+                    .font(Broadsheet.body(22))
+                    .contentShape(Rectangle())
+                    .onTapGesture { onRate(rating == value ? nil : value) }
+                    .help(rating == value ? "Clear the rating" : "Rate \(value)")
+                    .accessibilityLabel(rating == value ? "Clear the rating" : "Rate \(value)")
+            }
+        }
+        .foregroundStyle(.white)
     }
 }

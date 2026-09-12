@@ -5,12 +5,13 @@ import ShowMyBestKit
 @main
 struct ShowMyBestApp: App {
     @State private var model = LibraryModel()
+    @State private var review = ReviewSession()
     /// LIB-1: the library is remembered across launches.
     @AppStorage("libraryPath") private var libraryPath = ""
 
     var body: some Scene {
         WindowGroup {
-            RootView(model: model)
+            RootView(model: model, review: review)
                 .frame(minWidth: 1000, minHeight: 680)
                 .task {
                     // --library <path> opens a folder without touching the
@@ -49,6 +50,9 @@ struct ShowMyBestApp: App {
                         Text(screen.title).tag(screen)
                     }
                 }
+                Button("Leave Review Mode") { review.finish() }
+                    .keyboardShortcut(".", modifiers: .command)
+                    .disabled(!review.isActive)
                 Divider()
                 Button("Bigger Thumbnails") { model.thumbnailSize = min(360, model.thumbnailSize + 30) }
                     .keyboardShortcut("+", modifiers: .command)

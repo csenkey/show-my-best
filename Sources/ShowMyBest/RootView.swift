@@ -5,7 +5,7 @@ import ShowMyBestKit
 
 struct RootView: View {
     @Bindable var model: LibraryModel
-    @State private var review = ReviewSession()
+    @Bindable var review: ReviewSession
     @State private var detailKey: PhotoKey?
     @AppStorage("libraryPath") private var libraryPath = ""
 

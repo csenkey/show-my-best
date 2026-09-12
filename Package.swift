@@ -17,6 +17,12 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .executableTarget(
+            name: "Migrate",
+            dependencies: ["ShowMyBestKit"],
+            path: "Sources/Migrate",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .executableTarget(
             name: "SelfTest",
             dependencies: ["ShowMyBestKit"],
             path: "Sources/SelfTest",

@@ -23,3 +23,8 @@ swift run SelfTest --inspect <library folder>   # read-only report on a real lib
   from the real catalogue.
 - [docs/implementation-notes.md](docs/implementation-notes.md): how it is built, where each
   requirement lives, and what is not done yet.
+- [docs/competition-backfill.md](docs/competition-backfill.md): the one migration step the
+  app cannot do, because it needs each competition re-checked online.
+- [skill/photo-competition-curator/](skill/photo-competition-curator/): the Claude skill that
+  writes the data files, kept here so it and the spec stay in step. Copy it into Claude's
+  skills folder to install it.

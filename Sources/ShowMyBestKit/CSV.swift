@@ -76,6 +76,33 @@ public struct CSVRecord {
         hasTerminator = reparsed.hasTerminator
     }
 
+    /// Appends empty fields to the record, keeping every existing byte.
+    /// FMT-4: new columns are added at the end.
+    public mutating func appendEmptyFields(_ count: Int) {
+        guard count > 0 else { return }
+        var body = bytes
+        var terminator: [UInt8] = []
+        if hasTerminator {
+            if body.suffix(2).elementsEqual([carriageReturn, newline]) {
+                terminator = [carriageReturn, newline]
+                body.removeLast(2)
+            } else if body.last == newline {
+                terminator = [newline]
+                body.removeLast()
+            } else if body.last == carriageReturn {
+                terminator = [carriageReturn]
+                body.removeLast()
+            }
+        }
+        body.append(contentsOf: Array(repeating: comma, count: count))
+        body.append(contentsOf: terminator)
+        let reparsed = CSV.parseRecord(body, line: line)
+        bytes = reparsed.bytes
+        fieldRanges = reparsed.fieldRanges
+        values = reparsed.values
+        hasTerminator = reparsed.hasTerminator
+    }
+
     /// Gives an unterminated record a line ending, so a row can be appended
     /// after it (RAT-6: using the file's own ending).
     public mutating func appendTerminator(_ lineEnding: String) {
@@ -104,6 +131,21 @@ public struct CSVDocument {
         bytes.append(contentsOf: headerRecord.bytes)
         for record in records { bytes.append(contentsOf: record.bytes) }
         return Data(bytes)
+    }
+
+    /// Adds columns at the end of the header and of every row (FMT-4, MIG-2).
+    /// Columns that are already there are left alone.
+    public mutating func addColumns(_ names: [String]) {
+        let missing = names.filter { !hasColumn($0) }
+        guard !missing.isEmpty else { return }
+        headerRecord.appendEmptyFields(missing.count)
+        for (position, name) in missing.enumerated() {
+            headerRecord.setValue(name, at: headerNames.count + position)
+        }
+        headerNames.append(contentsOf: missing)
+        for index in records.indices {
+            records[index].appendEmptyFields(missing.count)
+        }
     }
 
     /// Builds a record with one field per column from the values given by

@@ -43,6 +43,9 @@ struct GalleryView: View {
                 .frame(width: 110)
                 .controlSize(.small)
 
+            Button("Find ⌘F") { model.findPhotoRequests += 1 }
+                .buttonStyle(SecondaryButtonStyle())
+
             Button("Review mode ⇧⌘R") { startReview() }             // CUL-2
                 .buttonStyle(SecondaryButtonStyle())
                 .keyboardShortcut("r", modifiers: [.command, .shift])

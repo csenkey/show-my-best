@@ -121,6 +121,8 @@ public final class LibraryModel {
     public var thumbnailSize: Double = 190
     public var showClosedCompetitions = false
     public var afterRatingMovesOn = true      // CUL-5, default from OI-3
+    /// Bumped to ask the window to open Find Photo; the view watches it.
+    public var findPhotoRequests = 0
 
     private var store: CatalogueStore?
     private var photosByKey: [PhotoKey: Int] = [:]
@@ -542,16 +544,40 @@ public final class LibraryModel {
         public var results: [String: Int] = [:]
     }
 
+    /// The photos a submission names (SUB-3). A `shoot/filename` reference is
+    /// exact; a bare filename is looked up the way Find Photo does it, and
+    /// lists every shoot that has that name rather than guessing between them.
+    public func photos(for submission: Submission) -> [Photo] {
+        var seen: Set<PhotoKey> = []
+        var result: [Photo] = []
+        for reference in submission.photoReferences {
+            let found: [Photo]
+            if let key = PhotoKey(reference: reference), let photo = photo(for: key) {
+                found = [photo]
+            } else {
+                found = PhotoFinder.find(reference, in: photos).photos
+            }
+            for photo in found where seen.insert(photo.key).inserted {
+                result.append(photo)
+            }
+        }
+        return result
+    }
+
+    /// DET-5: the entries that include this photo.
+    public func submissions(including key: PhotoKey) -> [Submission] {
+        sidecars.submissions.filter { submission in
+            photos(for: submission).contains { $0.key == key }
+        }
+    }
+
     public var submissionSummary: SubmissionSummary {
         var summary = SubmissionSummary()
         summary.entries = sidecars.submissions.count
         for submission in sidecars.submissions {
             summary.results[submission.resultLabel, default: 0] += 1
-            let fee = submission.entryFee.trimmingCharacters(in: .whitespaces)
-            guard !fee.isEmpty, fee.lowercased() != "free" else { continue }
-            let parts = fee.split(separator: " ")
-            if parts.count >= 2, let amount = Double(parts[1].replacingOccurrences(of: ",", with: ".")) {
-                summary.feesByCurrency[String(parts[0]), default: 0] += amount
+            if let fee = EntryFee.parse(submission.entryFee) {
+                summary.feesByCurrency[fee.currency, default: 0] += fee.value
             }
         }
         return summary

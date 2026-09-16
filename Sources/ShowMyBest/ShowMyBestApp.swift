@@ -30,6 +30,11 @@ struct ShowMyBestApp: App {
                 Button("Open Library…") { chooseLibrary() }
                     .keyboardShortcut("o")
             }
+            CommandGroup(before: .textEditing) {
+                Button("Find Photo…") { model.findPhotoRequests += 1 }
+                    .keyboardShortcut("f")
+                    .disabled(model.libraryURL == nil || review.isActive)
+            }
             CommandGroup(after: .newItem) {
                 Button("Reload") { model.reload() }          // SYN-6
                     .keyboardShortcut("r")

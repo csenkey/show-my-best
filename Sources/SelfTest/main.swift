@@ -251,6 +251,122 @@ do {
     check(LibraryScanner.monthFromShootName("NoMonth") == nil, "a folder with no month suffix")
 }
 
+section("Find by name")
+
+do {
+    func photo(_ shoot: String, _ filename: String, title: String = "") -> Photo {
+        var row = CatalogueRow(key: PhotoKey(shoot: shoot, filename: filename), recordIndex: 0)
+        row.title = title
+        return Photo(key: row.key, url: URL(fileURLWithPath: "/tmp/\(filename)"), row: row)
+    }
+    let library = [
+        photo("R8_Budapest_202606", "IMG_9786.JPG", title: "Liberty Bridge"),
+        photo("R8_Rovinj_202606", "IMG_2216.JPG"),
+        photo("R8_Budapest_202606", "IMG_2216.JPG"),
+        photo("SL35_Szeged_202607", "IMG_0998.jpg", title: "Zebegényi hídnál"),
+        photo("6X6_Balaton_202607", "IMG_1083.jpg"),
+    ]
+    func keys(_ result: PhotoFinder.Result) -> [String] { result.photos.map(\.key.description) }
+
+    check(keys(PhotoFinder.find("IMG_9786", in: library)) == ["R8_Budapest_202606/IMG_9786.JPG"],
+          "a bare camera stem")
+    check(keys(PhotoFinder.find("img_9786.jpg", in: library)) == ["R8_Budapest_202606/IMG_9786.JPG"],
+          "a filename, ignoring case")
+    check(keys(PhotoFinder.find("IMG-9786", in: library)) == ["R8_Budapest_202606/IMG_9786.JPG"],
+          "a stem written with a hyphen")
+    check(keys(PhotoFinder.find("9786", in: library)) == ["R8_Budapest_202606/IMG_9786.JPG"],
+          "just the number")
+
+    let reference = PhotoFinder.find("R8_Budapest_202606/IMG_9786.JPG", in: library)
+    check(reference.matches.count == 1 && keys(reference) == ["R8_Budapest_202606/IMG_9786.JPG"],
+          "a full shoot/filename reference, not counted twice", "\(reference.matches.map(\.name))")
+
+    check(keys(PhotoFinder.find("IMG_2216", in: library)).count == 2,
+          "the same filename in two shoots shows both (LIB-6)")
+    check(keys(PhotoFinder.find("R8_Rovinj_202606/IMG_2216.JPG", in: library)) == ["R8_Rovinj_202606/IMG_2216.JPG"],
+          "a reference picks the one shoot")
+
+    let pasted = PhotoFinder.find("""
+        Urgent — closes in 2 days (Mon, Sept 14). Your pick: IMG_9786 "Liberty Bridge".
+        Landscapes → IMG_0998, and IMG_4444 as a backup. Again IMG_9786. Checked 2026-09-12.
+        """, in: library)
+    check(pasted.matches.map(\.name) == ["IMG_9786", "IMG_0998"],
+          "a pasted message finds every photo it names, in order, each once", "\(pasted.matches.map(\.name))")
+    check(pasted.notFound == ["IMG_4444"], "and says which names are not in the library", "\(pasted.notFound)")
+    check(pasted.textMatches.isEmpty, "and does not read a year as a filename")
+
+    check(keys(PhotoFinder.find("zebegenyi", in: library)) == ["SL35_Szeged_202607/IMG_0998.jpg"],
+          "a title, ignoring case and accents")
+    check(keys(PhotoFinder.find("liberty", in: library)) == ["R8_Budapest_202606/IMG_9786.JPG"],
+          "part of a title")
+    check(PhotoFinder.find("   ", in: library).isEmpty, "an empty query finds nothing")
+}
+
+section("Entry fees (SUB-5)")
+
+do {
+    func fee(_ text: String) -> String {
+        guard let amount = EntryFee.parse(text) else { return "free/none" }
+        return "\(amount.currency) \(amount.value)"
+    }
+    check(fee("$27") == "USD 27.0", "a dollar sign", fee("$27"))
+    check(fee("US$25.50") == "USD 25.5", "US$ with cents", fee("US$25.50"))
+    check(fee("27 USD") == "USD 27.0", "the code after the amount", fee("27 USD"))
+    check(fee("EUR 18 per single image") == "EUR 18.0", "the code before, with words after", fee("EUR 18 per single image"))
+    check(fee("€18-21 per single image") == "EUR 18.0", "a range counts its lower figure", fee("€18-21 per single image"))
+    check(fee("£14") == "GBP 14.0", "a pound sign", fee("£14"))
+    check(fee("HUF 5,000") == "HUF 5000.0", "a thousands separator", fee("HUF 5,000"))
+    check(fee("Free") == "free/none", "free")
+    check(fee("Free, up to 3 images") == "free/none", "a number with no currency is not a fee", fee("Free, up to 3 images"))
+    check(fee("") == "free/none", "empty")
+}
+
+section("Submission photos (SUB-3, DET-5)")
+
+// LibraryModel is main-actor isolated; top-level code runs on the main thread.
+MainActor.assumeIsolated {
+    let library = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appendingPathComponent("show-my-best-selftest-\(UUID().uuidString)", isDirectory: true)
+    let fileManager = FileManager.default
+    for (shoot, file) in [("SL35_Balaton_Szeged_202608", "IMG_0944.jpg"), ("6X6_Szeged_202607", "IMG_1031.jpg"),
+                          ("R8_Rovinj_202606", "IMG_2216.JPG"), ("R8_Budapest_202606", "IMG_2216.JPG")] {
+        let folder = library.appendingPathComponent(shoot, isDirectory: true)
+        try! fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+        fileManager.createFile(atPath: folder.appendingPathComponent(file).path, contents: Data())
+    }
+    try! Data((header
+        + "IMG_0944.jpg,SL35_Balaton_Szeged_202608,t,2026-08,4,4,r,available\r\n"
+        + "IMG_1031.jpg,6X6_Szeged_202607,t,2026-07,5,4,r,available\r\n").utf8)
+        .write(to: library.appendingPathComponent("catalogue.csv"))
+    try! Data(("date_submitted,competition_id,competition_name,entry_fee,deadline,photos_submitted,category,recommendation_call,result,notes\r\n"
+        + "2026-09-16,x,Exposure One,$27,2026-09-21,IMG_0944.jpg,Film,enter,pending,\r\n"
+        + "2026-09-16,x,Exposure One,$27,2026-09-21,6X6_Szeged_202607/IMG_1031.jpg,Fine Art,enter,pending,\r\n"
+        + "2026-09-17,y,Other,Free,2026-10-01,IMG_2216.JPG;IMG_9999.jpg,Street,enter,pending,\r\n").utf8)
+        .write(to: library.appendingPathComponent("submissions.csv"))
+
+    let model = LibraryModel()
+    model.open(folder: library)
+    let entries = model.sidecars.submissions.sorted { $0.photoReferences.first ?? "" < $1.photoReferences.first ?? "" }
+    @MainActor func keys(_ submission: Submission) -> [String] { model.photos(for: submission).map(\.key.description) }
+
+    let bare = entries.first { $0.photoReferences == ["IMG_0944.jpg"] }
+    check(bare.map(keys) == ["SL35_Balaton_Szeged_202608/IMG_0944.jpg"],
+          "a bare filename, as the skill wrote it, finds its photo", "\(bare.map(keys) ?? [])")
+    let full = entries.first { $0.photoReferences == ["6X6_Szeged_202607/IMG_1031.jpg"] }
+    check(full.map(keys) == ["6X6_Szeged_202607/IMG_1031.jpg"], "a shoot/filename reference")
+    let ambiguous = entries.first { $0.photoReferences.contains("IMG_2216.JPG") }
+    check(ambiguous.map(keys)?.count == 2,
+          "a filename in two shoots shows both rather than guessing", "\(ambiguous.map(keys) ?? [])")
+
+    let including = model.submissions(including: PhotoKey(shoot: "SL35_Balaton_Szeged_202608", filename: "IMG_0944.jpg"))
+    check(including.count == 1, "the photo's detail finds the entry it was submitted in (DET-5)")
+
+    let summary = model.submissionSummary
+    check(summary.feesByCurrency == ["USD": 54], "fees paid adds up $27 twice", "\(summary.feesByCurrency)")
+
+    try? fileManager.removeItem(at: library)
+}
+
 print("\n\(checks - failures)/\(checks) checks passed")
 if failures > 0 {
     print("\(failures) FAILED")

@@ -56,4 +56,7 @@ enum Key {
     static let delete: UInt16 = 51
     static let forwardDelete: UInt16 = 117
     static let returnKey: UInt16 = 36
+    static let keypadEnter: UInt16 = 76
+    static let upArrow: UInt16 = 126
+    static let downArrow: UInt16 = 125
 }

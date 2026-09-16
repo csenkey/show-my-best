@@ -6,7 +6,22 @@ import ShowMyBestKit
 struct RootView: View {
     @Bindable var model: LibraryModel
     @Bindable var review: ReviewSession
-    @State private var detailKey: PhotoKey?
+    @State private var sheet: Sheet?
+
+    /// The detail and the finder share one sheet, so going from a search
+    /// result to its photo, or from a photo back to searching, swaps one for
+    /// the other instead of stacking a sheet on a sheet.
+    enum Sheet: Identifiable {
+        case detail(PhotoKey)
+        case find
+
+        var id: String {
+            switch self {
+            case .detail(let key): return "detail-\(key)"
+            case .find: return "find"
+            }
+        }
+    }
     @AppStorage("libraryPath") private var libraryPath = ""
 
     /// SYN-1: a change made outside the app shows up within two seconds.
@@ -33,9 +48,19 @@ struct RootView: View {
                     .transition(.opacity)
             }
         }
-        .sheet(item: $detailKey) { key in
-            PhotoDetailView(model: model, key: key, openPhoto: { detailKey = $0 })
-                .frame(minWidth: 900, minHeight: 700)
+        .sheet(item: $sheet) { sheet in
+            switch sheet {
+            case .detail(let key):
+                PhotoDetailView(model: model, key: key, openPhoto: { self.sheet = .detail($0) })
+                    .frame(minWidth: 900, minHeight: 700)
+            case .find:
+                FindPhotoView(model: model, open: { self.sheet = .detail($0) })
+                    .frame(minWidth: 640, idealWidth: 720, minHeight: 480, idealHeight: 560)
+            }
+        }
+        .onChange(of: model.findPhotoRequests) { _, _ in
+            guard model.libraryURL != nil, !review.isActive else { return }
+            sheet = .find
         }
     }
 
@@ -50,13 +75,13 @@ struct RootView: View {
                 case .gallery:
                     GalleryView(
                         model: model,
-                        openPhoto: { detailKey = $0 },
+                        openPhoto: { sheet = .detail($0) },
                         startReview: { startReview() }
                     )
                 case .competitions:
-                    CompetitionsView(model: model, openPhoto: { detailKey = $0 })
+                    CompetitionsView(model: model, openPhoto: { sheet = .detail($0) })
                 case .submissions:
-                    SubmissionsView(model: model, openPhoto: { detailKey = $0 })
+                    SubmissionsView(model: model, openPhoto: { sheet = .detail($0) })
                 }
             }
             .background(Broadsheet.bg)

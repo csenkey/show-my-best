@@ -242,7 +242,11 @@ public struct Submission: Identifiable {
     public var competitionName = ""
     public var entryFee = ""
     public var deadline = ""
-    public var photos: [PhotoKey] = []
+    /// `photos_submitted` exactly as written, one name per entry. FMT-7 asks
+    /// for `shoot/filename`, but a bare filename turns up too, so these are
+    /// resolved against the library rather than parsed as keys here — see
+    /// `LibraryModel.photos(for:)`.
+    public var photoReferences: [String] = []
     public var category = ""
     public var recommendationCall = ""
     public var result = ""

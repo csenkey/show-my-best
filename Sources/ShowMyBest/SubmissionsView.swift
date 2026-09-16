@@ -103,7 +103,7 @@ struct SubmissionsView: View {
             cell("Date", width: 96)
             cell("Competition", width: 210)
             cell("Category", width: 100)
-            cell("Photos", width: 130)
+            cell("Photos", width: 176)
             cell("Fee", width: 80)
             cell("Call then", width: 120)
             cell("Result", width: 90)
@@ -121,21 +121,7 @@ struct SubmissionsView: View {
             cell(submission.dateSubmitted, width: 96)
             competitionCell(submission)
             cell(submission.category, width: 100)
-            HStack(spacing: 4) {
-                // SUB-3
-                ForEach(submission.photos.prefix(3), id: \.self) { key in
-                    PhotoImage(url: model.photo(for: key)?.url, maxPixel: 120)
-                        .frame(width: 34, height: 24)
-                        .onTapGesture { openPhoto(key) }
-                        .help(key.description)
-                }
-                if submission.photos.count > 3 {
-                    Text("+\(submission.photos.count - 3)")
-                        .font(Broadsheet.body(11))
-                        .foregroundStyle(Broadsheet.muted)
-                }
-            }
-            .frame(width: 130, alignment: .leading)
+            photosCell(submission)
             cell(submission.entryFee.isEmpty ? "—" : submission.entryFee, width: 80)
             cell(callLabel(submission.recommendationCall), width: 120)
             HStack {
@@ -146,6 +132,35 @@ struct SubmissionsView: View {
         }
         .font(Broadsheet.body(14))
         .padding(.vertical, Broadsheet.Space.two)
+    }
+
+    /// SUB-3: big enough to recognise the photo at a glance, and a click opens
+    /// it. Names the library cannot find are shown as written, so an entry
+    /// never looks as if it had no photo at all.
+    private func photosCell(_ submission: Submission) -> some View {
+        let photos = model.photos(for: submission)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                ForEach(photos.prefix(2)) { photo in
+                    PhotoImage(url: photo.url, maxPixel: 240)
+                        .frame(width: 84, height: 56)
+                        .contentShape(Rectangle())
+                        .onTapGesture { openPhoto(photo.key) }
+                        .help("\(photo.key)\(photo.title.isEmpty ? "" : " — \(photo.title)")")
+                }
+                if photos.count > 2 {
+                    Text("+\(photos.count - 2)")
+                        .font(Broadsheet.body(12))
+                        .foregroundStyle(Broadsheet.muted)
+                }
+            }
+            if photos.isEmpty {
+                Text(submission.photoReferences.isEmpty ? "—" : submission.photoReferences.joined(separator: ", "))
+                    .font(Broadsheet.body(12))
+                    .foregroundStyle(Broadsheet.muted)
+            }
+        }
+        .frame(width: 176, alignment: .leading)
     }
 
     /// SUB-4: the entry points at its competition.

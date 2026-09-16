@@ -184,7 +184,7 @@ struct PhotoDetailView: View {
             }
         }
 
-        let submissions = model.sidecars.submissions(including: photo.key)
+        let submissions = model.submissions(including: photo.key)
         if !submissions.isEmpty {
             block("Submitted") {                    // DET-5
                 VStack(alignment: .leading, spacing: 4) {

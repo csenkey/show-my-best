@@ -25,9 +25,6 @@ public struct SidecarFiles {
         competitions.first { $0.id == id }
     }
 
-    public func submissions(including key: PhotoKey) -> [Submission] {
-        submissions.filter { $0.photos.contains(key) }
-    }
 }
 
 public enum SidecarLoader {
@@ -113,9 +110,10 @@ public enum SidecarLoader {
                     submission.competitionName = name
                     submission.entryFee = index.value("entry_fee", record)
                     submission.deadline = index.value("deadline", record)
-                    submission.photos = index.value("photos_submitted", record)
+                    submission.photoReferences = index.value("photos_submitted", record)
                         .split(separator: ";")
-                        .compactMap { PhotoKey(reference: $0.trimmingCharacters(in: .whitespaces)) }
+                        .map { $0.trimmingCharacters(in: .whitespaces) }
+                        .filter { !$0.isEmpty }
                     submission.category = index.value("category", record)
                     submission.recommendationCall = index.value("recommendation_call", record)
                     submission.result = index.value("result", record)

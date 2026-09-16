@@ -50,7 +50,7 @@ competitions. The app shows all of that once Istvan has formed his own view.
   submissions and results stay with the skill (D19).
 - Replying to critiques (D17).
 - Creating a new library from scratch: the skill creates `catalogue.csv` (D5).
-- Sharing, exporting, publishing or uploading photos.
+- Sharing, exporting, publishing or uploading photos. *Since extended:* preparing files for sale on portals is specified in [sales-spec.md](sales-spec.md).
 - Multiple users, accounts or sync between Macs.
 - Geographic (GPS) browsing (D3).
 

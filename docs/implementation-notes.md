@@ -100,6 +100,8 @@ properties, so they drop unrated photos on their own (IND-3).
 | 4.8 Reloading and errors | `LibraryModel.pollForChanges`/`reload`, `NoticeBar` |
 | §5 Non-functional | `ImageCache.swift` (NFR-4, 5, 7, 8), `Theme.swift` (NFR-9), menus (NFR-10) |
 
+| Selling ([sales-spec.md](sales-spec.md)) | `Sales.swift` (files), `SalesRules.swift` (holds, SAL-17 to SAL-23), `ListingStore.swift` (status writes, SAL-32 to SAL-35), `ListingExporter.swift` (SAL-26 to SAL-31), `LibraryModel+Sales.swift`, `SalesView.swift` |
+
 Requirement IDs appear as comments at the places that carry them, so
 `git grep RAT-6` finds the code that implements it.
 
@@ -113,13 +115,17 @@ Requirement IDs appear as comments at the places that carry them, so
   `replaceItemAt`. Those two are the only files the app writes there (RAT-13).
 - **RAT-9, RAT-10, RAT-11**: pending changes, daily backups (30 kept) and the
   change log live in `~/Library/Application Support/ShowMyBest/libraries/<library>/`.
+- **SAL-32, SAL-33**: `listings.csv` is the one other file the app writes in the
+  library, and only its `status` and date cells, under the same fresh-read,
+  splice and atomic-replace rules. Exports go to `~/Pictures/Show My Best
+  Exports/`, never into the library.
 - **RAT-12**: on reload, any rating the app logged in the last 7 days that has
   gone back to its *previous* value is restored and reported. It only fires on
   that exact reversal, so a value the app never wrote is left alone.
 
 ## 4. What is checked
 
-`swift run SelfTest` runs 57 checks with no UI and no Xcode: the CSV
+`swift run SelfTest` runs 135 checks, the selling side among them, with no UI and no Xcode: the CSV
 round-trip and splice, the rating writes (RAT-3/5/6), same filename in two
 shoots (AC-9), Hungarian text surviving a write (AC-12), the broken-file
 refusal and recovery (AC-7), the overwrite restore (AC-4), the reveal rules

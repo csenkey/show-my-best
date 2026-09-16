@@ -85,21 +85,22 @@ public final class SupportFiles {
 
     // MARK: Backups (RAT-10)
 
-    /// Copies the catalogue aside once a day, before the first write.
-    public func backupIfFirstWriteToday(_ catalogueURL: URL) {
-        let today = ISODate.today()
-        let destination = backupsURL.appendingPathComponent("catalogue-\(today).csv")
+    /// Copies a library file aside once a day, before the first write
+    /// (RAT-10, SAL-34): `catalogue-2026-09-16.csv`, `listings-2026-09-16.csv`.
+    public func backupIfFirstWriteToday(_ fileURL: URL) {
+        let stem = fileURL.deletingPathExtension().lastPathComponent
+        let destination = backupsURL.appendingPathComponent("\(stem)-\(ISODate.today()).\(fileURL.pathExtension)")
         guard !fileManager.fileExists(atPath: destination.path) else { return }
-        guard fileManager.fileExists(atPath: catalogueURL.path) else { return }
-        try? fileManager.copyItem(at: catalogueURL, to: destination)
-        pruneBackups()
+        guard fileManager.fileExists(atPath: fileURL.path) else { return }
+        try? fileManager.copyItem(at: fileURL, to: destination)
+        pruneBackups(prefix: "\(stem)-")
     }
 
-    private func pruneBackups() {
+    private func pruneBackups(prefix: String) {
         guard let files = try? fileManager.contentsOfDirectory(at: backupsURL, includingPropertiesForKeys: nil) else { return }
-        let catalogues = files.filter { $0.lastPathComponent.hasPrefix("catalogue-") }.sorted { $0.lastPathComponent < $1.lastPathComponent }
-        guard catalogues.count > SupportFiles.maximumBackups else { return }
-        for file in catalogues.prefix(catalogues.count - SupportFiles.maximumBackups) {
+        let copies = files.filter { $0.lastPathComponent.hasPrefix(prefix) }.sorted { $0.lastPathComponent < $1.lastPathComponent }
+        guard copies.count > SupportFiles.maximumBackups else { return }
+        for file in copies.prefix(copies.count - SupportFiles.maximumBackups) {
             try? fileManager.removeItem(at: file)
         }
     }

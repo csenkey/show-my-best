@@ -135,7 +135,7 @@ public enum SidecarLoader {
         case failure(String)
     }
 
-    private static func read(_ url: URL) -> ReadOutcome {
+    static func read(_ url: URL) -> ReadOutcome {
         do {
             return .success(try CSV.parse(data: try Data(contentsOf: url)))
         } catch let error as CSVError {

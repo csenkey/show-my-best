@@ -8,13 +8,14 @@ public final class LibraryModel {
     // MARK: Types
 
     public enum Screen: String, CaseIterable, Identifiable {
-        case gallery, competitions, submissions
+        case gallery, competitions, submissions, sales
         public var id: String { rawValue }
         public var title: String {
             switch self {
             case .gallery: return "Gallery"
             case .competitions: return "Competitions"
             case .submissions: return "Submissions"
+            case .sales: return "Sales"
             }
         }
     }
@@ -110,6 +111,8 @@ public final class LibraryModel {
     public private(set) var photos: [Photo] = []
     public private(set) var shootNames: [String] = []
     public private(set) var sidecars = SidecarFiles()
+    /// Portals, listings and sales (sales spec 4).
+    public private(set) var sales = SalesFiles()
     public private(set) var notices: [Notice] = []
     public private(set) var lastReloadedAt: Date?
 
@@ -123,6 +126,25 @@ public final class LibraryModel {
     public var afterRatingMovesOn = true      // CUL-5, default from OI-3
     /// Bumped to ask the window to open Find Photo; the view watches it.
     public var findPhotoRequests = 0
+    public var salesSection: SalesSection = .queue
+    /// The portal whose files are being prepared right now, if any.
+    public var preparingPortalID: String?
+    /// Written into every exported file as creator and copyright holder (SAL-28).
+    public var creatorName = "Istvan Csenkey-Sinko"
+
+    /// SAL-1
+    public enum SalesSection: String, CaseIterable, Identifiable {
+        case queue, listed, portals, earnings
+        public var id: String { rawValue }
+        public var title: String {
+            switch self {
+            case .queue: return "Upload queue"
+            case .listed: return "Listed"
+            case .portals: return "Portals"
+            case .earnings: return "Earnings"
+            }
+        }
+    }
 
     private var store: CatalogueStore?
     private var photosByKey: [PhotoKey: Int] = [:]
@@ -143,6 +165,8 @@ public final class LibraryModel {
     @ObservationIgnored private var cachedVisible: [Photo] = []
     @ObservationIgnored private var cachedVisibleKey: ViewKey?
     @ObservationIgnored private var generation = 0
+    /// Photo dimensions for SAL-21, read from file headers once per reload.
+    @ObservationIgnored var pixelSizes: [PhotoKey: PixelSize?] = [:]
 
     public init() {}
 
@@ -180,6 +204,7 @@ public final class LibraryModel {
         photos = []
         shootNames = []
         sidecars = SidecarFiles()
+        sales = SalesFiles()
     }
 
     // MARK: Reloading (SYN-1, SYN-6)
@@ -189,6 +214,8 @@ public final class LibraryModel {
         let restored = store.reload()
         let scanned = LibraryScanner.scan(libraryURL)
         sidecars = SidecarLoader.load(libraryURL: libraryURL)
+        sales = SalesLoader.load(libraryURL: libraryURL)
+        pixelSizes = [:]
         merge(scanned: scanned, store: store)
         fingerprint = currentFingerprint()
         lastReloadedAt = Date()
@@ -216,7 +243,7 @@ public final class LibraryModel {
                 ))
             }
         }
-        for error in sidecars.errors {
+        for error in sidecars.errors + sales.errors {
             notices.append(Notice(kind: .warning, title: error, detail: "Showing the last good data for this file."))
         }
         if !restored.isEmpty {
@@ -280,7 +307,8 @@ public final class LibraryModel {
         guard let libraryURL else { return "" }
         let fileManager = FileManager.default
         var parts: [String] = []
-        for name in ["catalogue.csv", "competitions.csv", "competition_matches.csv", "submissions.csv"] {
+        for name in ["catalogue.csv", "competitions.csv", "competition_matches.csv", "submissions.csv",
+                     "portals.csv", "listings.csv", "sales.csv"] {
             let url = libraryURL.appendingPathComponent(name)
             let attributes = try? fileManager.attributesOfItem(atPath: url.path)
             let date = (attributes?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
@@ -337,6 +365,10 @@ public final class LibraryModel {
     public func rateSelection(_ rating: Int?) {
         guard !selection.isEmpty else { return }
         setRating(rating, for: selection)
+    }
+
+    func post(_ notice: Notice) {
+        notices.append(notice)
     }
 
     public func dismiss(_ notice: Notice) {

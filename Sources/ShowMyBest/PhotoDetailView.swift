@@ -198,6 +198,38 @@ struct PhotoDetailView: View {
                 }
             }
         }
+
+        forSale(photo)
+    }
+
+    /// SAL-25: where the photo is offered, and what holds it back.
+    @ViewBuilder
+    private func forSale(_ photo: Photo) -> some View {
+        let listings = model.listings(for: photo)
+        if !listings.isEmpty {
+            block("For sale") {
+                VStack(alignment: .leading, spacing: Broadsheet.Space.three) {
+                    ForEach(listings) { listing in
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: Broadsheet.Space.two) {
+                                Text(model.sales.portal(id: listing.portalID)?.displayName ?? listing.portalID)
+                                    .font(Broadsheet.body(16))
+                                TagLabel(listing.typeLabel)
+                                TagLabel(listing.statusLabel, style: listing.status == .live ? .accent : .neutral)
+                            }
+                            if !listing.reason.isEmpty {
+                                Text(listing.reason)
+                                    .font(Broadsheet.body(14))
+                                    .foregroundStyle(Broadsheet.secondary)
+                            }
+                            if listing.status == .suggested || listing.status == .prepared {
+                                AssessmentLines(assessment: model.assessment(for: listing))
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func deadlineText(_ match: CompetitionMatch, _ competition: Competition) -> String {

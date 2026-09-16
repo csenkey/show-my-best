@@ -82,6 +82,8 @@ struct RootView: View {
                     CompetitionsView(model: model, openPhoto: { sheet = .detail($0) })
                 case .submissions:
                     SubmissionsView(model: model, openPhoto: { sheet = .detail($0) })
+                case .sales:
+                    SalesView(model: model, openPhoto: { sheet = .detail($0) })
                 }
             }
             .background(Broadsheet.bg)

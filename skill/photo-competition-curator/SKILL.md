@@ -109,6 +109,8 @@ Istvan may come at this from either direction:
 
 Before finalising a match, check `submissions.csv` for conflicting "must be previously unentered" rules, and re-check the eligibility facts from §4.
 
+Check `listings.csv` too, if it exists — the `photo-sales-curator` skill writes it. A photo whose listing is `uploaded` or `live` on a portal counts as **published**: don't match it to a competition whose `previously_unpublished` rule is `yes`, and say so when the rule is `unknown`. A photo uploaded or live on an `exclusive` portal (see `portals.csv`) is not matched at all. The reverse holds as well: Show My Best won't let a photo be prepared for sale while it is entered and waiting for a result, or matched to a competition that hasn't closed — so a match has a cost, and matching a photo to a competition that closes months away keeps it off the market until then.
+
 Write each match as a row in `competition_matches.csv` with its category, `role` (`primary` or `alternate`) and a `reason` that names both ratings — and when they differ by 2 or more, says so and what the risk is. When you re-match a competition, replace that competition's rows rather than adding to them. Keep `competition_fit_notes` in the catalogue as a readable summary consistent with those rows.
 
 Present recommendations as a short table: competition, deadline, entry cost and call, suggested photos, and the one-line reason for that pairing specifically.

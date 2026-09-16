@@ -150,6 +150,14 @@ struct CompetitionsView: View {
                                     }
                                 }
                                 .font(Broadsheet.body(11))
+                                if wantsUnpublished(competition) {
+                                    let portals = model.publishedPortals(for: photo.key)
+                                    if !portals.isEmpty {          // SAL-24
+                                        Text("For sale on \(portals.joined(separator: ", "))")
+                                            .font(Broadsheet.heading(11))
+                                            .foregroundStyle(Broadsheet.accent2Text)
+                                    }
+                                }
                             }
                             .help(match.reason)
                         }
@@ -219,6 +227,11 @@ struct CompetitionsView: View {
         if !competition.prize.isEmpty { rows.append(("Prize", competition.prize)) }
         if !competition.lastChecked.isEmpty { rows.append(("Checked", competition.lastChecked)) }
         return rows
+    }
+
+    /// SAL-24: a rule that is `yes`, or that nobody could confirm.
+    private func wantsUnpublished(_ competition: Competition) -> Bool {
+        ["yes", "unknown"].contains(competition.previouslyUnpublished.lowercased())
     }
 
     private func unpublishedText(_ value: String) -> String {

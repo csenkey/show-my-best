@@ -253,16 +253,9 @@ public final class CatalogueStore {
     }
 
     /// RAT-7: a temporary file beside the catalogue, then an atomic replace, so
-    /// no reader ever sees half a file. RAT-13: these are the only two files
-    /// the app writes in the library.
+    /// no reader ever sees half a file.
     private func writeAtomically(_ data: Data) throws {
-        let temporaryURL = libraryURL.appendingPathComponent(".catalogue.csv.showmybest-tmp")
-        try data.write(to: temporaryURL, options: .atomic)
-        if FileManager.default.fileExists(atPath: catalogueURL.path) {
-            _ = try FileManager.default.replaceItemAt(catalogueURL, withItemAt: temporaryURL)
-        } else {
-            try FileManager.default.moveItem(at: temporaryURL, to: catalogueURL)
-        }
+        try AtomicFile.replace(catalogueURL, with: data)
     }
 
     // MARK: RAT-12 — putting back ratings something else overwrote
@@ -291,6 +284,31 @@ public final class CatalogueStore {
         }
         if !restored.isEmpty { support.savePending(pending) }
         return restored
+    }
+}
+
+/// A temporary file beside the target, then a replace in one step (FMT-9).
+/// RAT-13 and SAL-32: the catalogue and the listings are the only files the
+/// app writes in the library.
+enum AtomicFile {
+    static func replace(_ url: URL, with data: Data) throws {
+        let temporaryURL = url.deletingLastPathComponent()
+            .appendingPathComponent(".\(url.lastPathComponent).showmybest-tmp")
+        try data.write(to: temporaryURL, options: .atomic)
+        if FileManager.default.fileExists(atPath: url.path) {
+            _ = try FileManager.default.replaceItemAt(url, withItemAt: temporaryURL)
+        } else {
+            try FileManager.default.moveItem(at: temporaryURL, to: url)
+        }
+    }
+
+    /// Puts a finished temporary file in place, replacing what is there.
+    static func move(_ temporaryURL: URL, to url: URL) throws {
+        if FileManager.default.fileExists(atPath: url.path) {
+            _ = try FileManager.default.replaceItemAt(url, withItemAt: temporaryURL)
+        } else {
+            try FileManager.default.moveItem(at: temporaryURL, to: url)
+        }
     }
 }
 

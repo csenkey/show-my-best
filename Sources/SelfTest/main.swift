@@ -323,8 +323,8 @@ do {
 
 section("Submission photos (SUB-3, DET-5)")
 
-// LibraryModel is main-actor isolated; top-level code runs on the main thread.
-MainActor.assumeIsolated {
+// LibraryModel is main-actor isolated, and so is top-level code.
+do {
     let library = URL(fileURLWithPath: NSTemporaryDirectory())
         .appendingPathComponent("show-my-best-selftest-\(UUID().uuidString)", isDirectory: true)
     let fileManager = FileManager.default
@@ -366,6 +366,8 @@ MainActor.assumeIsolated {
 
     try? fileManager.removeItem(at: library)
 }
+
+await salesChecks()
 
 print("\n\(checks - failures)/\(checks) checks passed")
 if failures > 0 {

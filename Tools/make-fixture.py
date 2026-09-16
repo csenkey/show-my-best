@@ -288,6 +288,98 @@ def build(root):
         ],
     )
 
+    # The selling side (docs/sales-spec.md): a held listing, a photo too small
+    # for a portal, an edition that holds back stock, one for an unrated photo.
+    write_csv(
+        os.path.join(root, "portals.csv"),
+        ["portal_id", "name", "kind", "url", "signup_url", "upload_url", "account_status",
+         "exclusivity", "commission", "payout", "min_megapixels", "max_long_edge_px",
+         "max_keywords", "max_title_chars", "editorial", "film_scans", "terms_flag",
+         "terms_notes", "recommendation_call", "reasoning", "last_checked"],
+        [
+            ["stock-one", "Stock One", "stock", "https://stock-one.example",
+             "https://stock-one.example/join", "https://stock-one.example/upload", "active",
+             "non-exclusive", "33% of each licence", "USD 25 minimum, PayPal", "0.3", "",
+             "49", "70", "yes", "yes", "caution",
+             "Contributors' photos may be licensed for AI training unless you opt out in account settings.",
+             "join",
+             "The biggest non-exclusive market that takes film scans; a good place to learn what sells.",
+             "2026-09-12"],
+            ["print-house", "Print House", "print-on-demand", "https://print-house.example",
+             "https://print-house.example/sell", "https://print-house.example/upload", "none",
+             "non-exclusive", "You set the markup", "Monthly, bank transfer", "4", "", "20", "100",
+             "no", "yes", "ok", "", "join",
+             "Wall prints for the strongest landscape and film work, without holding stock.",
+             "2026-07-30"],
+            ["own-shop", "Own shop", "own-shop", "https://csenkey.example", "", "", "active",
+             "non-exclusive", "All of it, less payment fees", "", "", "", "", "", "yes", "yes",
+             "ok", "", "later", "Only for numbered editions of the very best frames.", "2026-09-01"],
+        ],
+    )
+
+    write_csv(
+        os.path.join(root, "listings.csv"),
+        ["portal_id", "source_folder", "filename", "listing_type", "title", "description",
+         "keywords", "category", "price", "currency", "edition_size", "print_sizes", "reason",
+         "status", "suggested_on", "prepared_on", "uploaded_on", "live_on", "ended_on",
+         "portal_ref", "notes"],
+        [
+            ["stock-one", "R8_Budapest_202606", b[0], "stock", "Yellow tram at dusk, Budapest",
+             "A yellow tram passes on the embankment at dusk, city lights coming on.",
+             "tram;budapest;hungary;dusk;public transport;city;night;europe", "Transport", "", "",
+             "", "", "Clean, searchable, and Budapest trams sell steadily.", "suggested", "2026-09-12",
+             "", "", "", "", "", ""],
+            ["stock-one", "R8_Rovinj_202606", r[1], "stock", "Fishing nets drying on a rail",
+             "Fishing nets hung over a rail to dry in a Croatian harbour.",
+             "fishing nets;harbour;croatia;rovinj;texture;pattern;fishing industry", "Industry", "",
+             "", "", "", "The repetition makes a useful background texture.", "suggested",
+             "2026-09-12", "", "", "", "", "", ""],
+            ["stock-one", "6D_Szeged_202605", d[0], "editorial", "Morning market, Szeged",
+             "Szeged, Hungary: shoppers at the Mars tér market on a May morning.",
+             "market;szeged;hungary;shopping;people;morning", "Editorial", "", "", "", "",
+             "Recognisable faces with no release, so editorial only.", "suggested", "2026-09-12",
+             "", "", "", "", "", ""],
+            ["stock-one", "R8_Rovinj_202606", r[2], "stock", "Stone steps in noon light",
+             "Old stone steps in hard noon light, Rovinj old town.",
+             "steps;stone;rovinj;croatia;old town;shadow", "Architecture", "", "", "", "",
+             "Hard light and strong shapes.", "prepared", "2026-09-10", "2026-09-14", "", "", "",
+             "", ""],
+            ["stock-one", "R8_Rovinj_202606", r[3], "stock", "Blue shutters", "", "shutters;blue",
+             "", "", "", "", "", "Strong colour.", "suggested", "2026-09-12", "", "", "", "", "", ""],
+            ["stock-one", "R8_Rovinj_202606", r[0], "stock", "Boy jumping off a harbour wall",
+             "A boy jumps into the sea from the harbour wall in Rovinj.",
+             "summer;jump;harbour;croatia;childhood", "Lifestyle", "", "", "", "",
+             "Summer energy that sells in season.", "live", "2026-08-01", "2026-08-02",
+             "2026-08-02", "2026-08-05", "", "https://stock-one.example/item/88412", ""],
+            ["stock-one", "R8_Budapest_202606", b[1], "stock", "Bridge pillar", "",
+             "bridge;pillar;budapest", "Architecture", "", "", "", "", "A plain subject.",
+             "rejected", "2026-08-01", "2026-08-02", "2026-08-02", "", "2026-08-06", "",
+             "Rejected: limited commercial value"],
+            ["print-house", "SL35_Szeged_202607", s[1], "print", "Zebegényi hídnál",
+             "Film photograph of the river at Zebegény.", "film;river;hungary", "Landscape", "45",
+             "EUR", "", "30x40;50x70", "The mood carries on a wall more than on a screen.",
+             "suggested", "2026-09-12", "", "", "", "", "", ""],
+            ["print-house", "6D_Szeged_202605", d[0], "print", "Market morning", "",
+             "market;szeged", "Documentary", "35", "EUR", "", "30x40", "Warm and busy.",
+             "uploaded", "2026-09-01", "2026-09-02", "2026-09-03", "", "", "", ""],
+            ["own-shop", "R8_Budapest_202606", b[0], "edition", "Tram at dusk",
+             "Signed archival print.", "", "", "180", "EUR", "10", "40x50",
+             "Your strongest frame, and both of us rate it 5.", "live", "2026-08-20", "",
+             "2026-08-22", "2026-08-22", "", "", ""],
+        ],
+    )
+
+    write_csv(
+        os.path.join(root, "sales.csv"),
+        ["date", "portal_id", "source_folder", "filename", "listing_type", "edition_number",
+         "amount", "currency", "notes"],
+        [
+            ["2026-09-02", "stock-one", "R8_Rovinj_202606", r[0], "stock", "", "0.99", "USD", "Standard licence"],
+            ["2026-09-12", "stock-one", "R8_Rovinj_202606", r[0], "stock", "", "1.20", "USD", "Standard licence"],
+            ["2026-09-14", "own-shop", "R8_Budapest_202606", b[0], "edition", "1", "180", "EUR", "40x50, signed"],
+        ],
+    )
+
     print(f"fixture library written to {root}")
 
 

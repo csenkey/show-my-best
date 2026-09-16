@@ -19,6 +19,14 @@ struct ShowMyBestApp: App {
                     let arguments = ProcessInfo.processInfo.arguments
                     if let flag = arguments.firstIndex(of: "--library"), flag + 1 < arguments.count {
                         model.open(folder: URL(fileURLWithPath: arguments[flag + 1]))
+                        if let flag = arguments.firstIndex(of: "--screen"), flag + 1 < arguments.count,
+                           let screen = LibraryModel.Screen(rawValue: arguments[flag + 1]) {
+                            model.screen = screen
+                        }
+                        if let flag = arguments.firstIndex(of: "--sales-section"), flag + 1 < arguments.count,
+                           let section = LibraryModel.SalesSection(rawValue: arguments[flag + 1]) {
+                            model.salesSection = section
+                        }
                     } else if !libraryPath.isEmpty {
                         model.open(folder: URL(fileURLWithPath: libraryPath))
                     }

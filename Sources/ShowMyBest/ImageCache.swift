@@ -154,6 +154,15 @@ final class ImageCache: @unchecked Sendable {
 }
 
 /// A photo that loads itself, at whatever size it is asked for.
+///
+/// The frame belongs to the placeholder, and the photo is drawn as an overlay
+/// on it. That is deliberate: an overlay can never change the size of the
+/// view it sits on. Drawn inside a ZStack instead, a `.fill` photo reported
+/// its full, uncropped size to layout — `.clipped()` hides the overflow but
+/// does not shrink the frame — so a portrait photo made its cell grow the
+/// moment it loaded. In a scroll view that growth, above the visible area,
+/// shoved the scroll position down, and scrolling up bounced back before it
+/// could reach the top.
 struct PhotoImage: View {
     let url: URL?
     var maxPixel: Int = 400
@@ -163,15 +172,16 @@ struct PhotoImage: View {
     @State private var image: NSImage?
 
     var body: some View {
-        ZStack {
-            Rectangle().fill(Broadsheet.neutral(300))
-            if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: contentMode)
+        Rectangle()
+            .fill(Broadsheet.neutral(300))
+            .overlay {
+                if let image {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: contentMode)
+                }
             }
-        }
-        .clipped()
+            .clipped()
         .task(id: url) {
             image = nil
             guard let url else { return }
